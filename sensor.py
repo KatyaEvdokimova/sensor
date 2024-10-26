@@ -1,12 +1,14 @@
 import random
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
+import sys
 
 class SensorEmulator:
-    def __init__(self, interval, metric_name, unit):
+    def __init__(self, interval, metric_name, unit, duration_minutes):
         self.interval = interval
         self.metric_name = metric_name
         self.unit = unit
+        self.duration_minutes = duration_minutes
         self.values = []
         self.start_time = datetime.now()
 
@@ -14,11 +16,15 @@ class SensorEmulator:
         return random.uniform(self.interval[0], self.interval[1])
 
     def save_to_file(self, value):
-        with open(f"{self.metric_name}_data.csv", "a") as file:
-            file.write(f"{datetime.now()},{self.metric_name},{value},{self.unit}\n")
+        try:
+            with open(f"{self.metric_name}_data.csv", "a") as file:
+                file.write(f"{datetime.now()},{self.metric_name},{value},{self.unit}\n")
+        except IOError as e:
+            print(f"Ошибка при записи в файл: {e}")
 
     def run(self):
-        while True:
+        end_time = self.start_time + timedelta(minutes=self.duration_minutes)
+        while datetime.now() < end_time:
             current_time = datetime.now()
             value = self.generate_value()
             self.values.append(value)
@@ -32,13 +38,22 @@ class SensorEmulator:
 
             time.sleep(1)
 
+
+        if self.values:
+            final_average_value = sum(self.values) / len(self.values)
+            self.save_to_file(final_average_value)
+
 if __name__ == "__main__":
-    # Пример использования
-    interval = (20, 30)  # Интервал значений (например, температура от 20 до 30 градусов)
-    metric_name = "temperature"  # Название метрики
-    unit = "Celsius"  # Единица измерения
+    try:
+        interval_min = float(input("Введите минимальное значение интервала: "))
+        interval_max = float(input("Введите максимальное значение интервала: "))
+        metric_name = input("Введите название метрики: ")
+        unit = input("Введите единицу измерения: ")
+        duration_minutes = int(input("Введите количество минут работы программы: "))
+    except ValueError as e:
+        print(f"Ошибка ввода: {e}")
+        sys.exit(1)
 
-    sensor = SensorEmulator(interval, metric_name, unit)
+    interval = (interval_min, interval_max)
+    sensor = SensorEmulator(interval, metric_name, unit, duration_minutes)
     sensor.run()
-
-
